@@ -1,0 +1,64 @@
+Build a full-stack SaaS web app called "OrderPing" - a food court order notification system for Indian malls. No app downloads needed for customers, no POS changes needed for vendors.
+
+CORE CONCEPT:
+- Vendor has ONE static QR code standee at their counter (e.g., orderpingapp.com/stall/haldirams)
+- Customer orders food, gets paper receipt with order number from existing POS
+- Customer scans the stall QR code → web page opens → types their receipt/token number → gets live status
+- When order is ready, vendor taps number on numpad → customer phone vibrates + audio chime + screen flashes green
+- Zero hardware cost (vendor uses existing smartphone), zero app download (pure web)
+
+PAGES TO BUILD:
+
+1. LANDING PAGE (/) - Marketing page explaining the product, "For Vendors" CTA
+
+2. VENDOR ONBOARDING (/register) - Simple form: Stall name, Mall name, email → generates unique stall slug + QR code PDF download
+
+3. VENDOR DASHBOARD (/vendor/[stallSlug]) - Password protected
+   - BIG NUMPAD (calculator style) to type order number
+   - Giant GREEN "READY" button
+   - Live "Currently Serving" ticker showing last 10 called orders
+   - "Recently Called" scrollable list with timestamps
+   - Small analytics strip: avg wait time today, orders served today
+
+4. CUSTOMER TRACKING PAGE (/track/[stallSlug]) - This is what QR code opens
+   - Stall name shown prominently
+   - Input field: "Enter your receipt/token number"
+   - After entry: Show live queue status
+     - "Currently serving: 42" 
+     - "Your token: 47 — approx 3-4 orders ahead"
+     - Progress bar
+     - Wake Lock API: screen stays on
+     - When status changes to READY: screen flashes GREEN, plays audio chime, vibrates (Vibration API)
+   - Network offline detection: show yellow warning banner
+   - Hindi + English bilingual UI
+
+5. ADMIN ANALYTICS (/admin) - Simple password-protected analytics
+   - All stalls, avg wait times, orders per day chart
+
+TECH STACK:
+- Frontend: React + Tailwind CSS (clean mobile-first design)
+- Backend: Node.js/Express with Socket.io for real-time
+- Database: Use in-memory storage + localStorage for MVP (no external DB needed for demo)
+- Real-time: WebSockets via Socket.io
+- QR generation: qrcode npm package
+- Audio: Web Audio API for chime
+
+DATA MODEL:
+Stalls: { id, name, mallName, slug, createdAt }
+Orders: { id, stallId, receiptNumber, status: 'waiting'|'ready'|'completed', createdAt, readyAt }
+
+DESIGN:
+- Dark theme with vibrant green/orange accents
+- Mobile-first (both vendor and customer use phones)
+- Large tap targets (vendor has greasy hands!)
+- Status colors: Orange = preparing, Green = ready, Grey = done
+- Show a "How it works" 3-step diagram on landing page
+
+CRITICAL UX DETAILS:
+- Customer page: polling every 5 seconds as fallback even if WebSocket fails
+- Vendor numpad: confirm dialog before marking ready to prevent mis-taps
+- When order ready: 3 rapid vibrations + loud 'ding' sound + full-screen green flash for 3 seconds
+- After pickup: auto-reset after 10 minutes
+- Show "Nudge" button on vendor side if customer hasn't collected after 5 mins (triggers another alert)
+
+Make it fully working and deployable. Include sample stall data for demo.
