@@ -116,8 +116,24 @@ export function markOrderReady(stallSlug: string, receiptNumber: string): Order 
   const stall = stalls.get(stallSlug);
   if (!stall) return null;
   const key = `${stall.id}:${receiptNumber}`;
-  const order = orders.get(key);
-  if (!order) return null;
+  let order = orders.get(key);
+
+  // Auto-create the order if the vendor calls it ready before the customer scanned
+  if (!order) {
+    order = {
+      id: nanoid(),
+      stallId: stall.id,
+      stallSlug,
+      receiptNumber,
+      status: "waiting",
+      createdAt: new Date(),
+      readyAt: null,
+      completedAt: null,
+      nudgeCount: 0,
+      lastNudgeAt: null,
+    };
+    orders.set(key, order);
+  }
 
   order.status = "ready";
   order.readyAt = new Date();
