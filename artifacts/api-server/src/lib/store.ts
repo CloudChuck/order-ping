@@ -277,9 +277,9 @@ export function getAdminAnalytics() {
 
 function seedDemoData() {
   const demoStalls = [
-    { name: "Haldirams", mallName: "Ambience Mall", email: "haldirams@demo.com", password: "demo123", slug: "haldirams" },
-    { name: "McDonalds", mallName: "Select Citywalk", email: "mcd@demo.com", password: "demo123", slug: "mcdonalds" },
-    { name: "Dominos Pizza", mallName: "DLF Mall of India", email: "dominos@demo.com", password: "demo123", slug: "dominos" },
+    { name: "Haldirams", mallName: "Gaur City Mall", email: "haldirams@demo.com", password: "demo123", slug: "haldirams" },
+    { name: "McDonalds", mallName: "Gaur City Mall", email: "mcd@demo.com", password: "demo123", slug: "mcdonalds" },
+    { name: "Dominos Pizza", mallName: "Gaur City Mall", email: "dominos@demo.com", password: "demo123", slug: "dominos" },
   ];
 
   for (const s of demoStalls) {

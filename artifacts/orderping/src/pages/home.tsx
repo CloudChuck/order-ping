@@ -2,7 +2,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Store, QrCode, BellRing, Utensils, CheckCircle2 } from "lucide-react";
+import { ArrowRight, Store, QrCode, BellRing, Utensils, CheckCircle2, Smartphone, ShieldCheck, Volume2 } from "lucide-react";
 
 export default function Home() {
   return (
@@ -101,6 +101,61 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Built for Indian food courts */}
+        <section className="py-20 md:py-28">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-14">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Built for Indian food courts</h2>
+            </div>
+            <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-16">
+              <Card className="border-border/60 bg-card/70">
+                <CardContent className="p-6">
+                  <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4 border border-primary/20">
+                    <Smartphone className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="font-bold text-lg mb-2">Zero hardware cost</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    Works on the vendor's existing smartphone. No tablets, no POS changes, no setup fees.
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="border-border/60 bg-card/70">
+                <CardContent className="p-6">
+                  <div className="h-12 w-12 rounded-xl bg-accent/10 flex items-center justify-center mb-4 border border-accent/20">
+                    <ShieldCheck className="h-6 w-6 text-accent" />
+                  </div>
+                  <h3 className="font-bold text-lg mb-2">Respects customer privacy</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    No phone number needed. No WhatsApp. No app download. Just scan and wait.
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="border-border/60 bg-card/70">
+                <CardContent className="p-6">
+                  <div className="h-12 w-12 rounded-xl bg-green-500/10 flex items-center justify-center mb-4 border border-green-500/20">
+                    <Volume2 className="h-6 w-6 text-green-500" />
+                  </div>
+                  <h3 className="font-bold text-lg mb-2">Works even if customer forgets to check</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    Bilingual alerts, screen stays on, loud audio chime + vibration when order is ready.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* CTA */}
+            <div className="text-center max-w-2xl mx-auto bg-primary/5 border border-primary/20 rounded-2xl p-10">
+              <p className="text-2xl md:text-3xl font-bold mb-2">Start for FREE today.</p>
+              <p className="text-lg text-muted-foreground mb-8">First stall setup in under 2 minutes.</p>
+              <Link href="/register">
+                <Button size="lg" className="text-lg h-14 px-10 bg-primary hover:bg-primary/90 text-primary-foreground font-bold">
+                  Get Your QR Code <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </section>
+
         {/* Demo Section */}
         <section className="py-20 md:py-32" id="demo">
           <div className="container mx-auto px-4">
@@ -177,7 +232,7 @@ export default function Home() {
             <span className="font-bold text-lg">OrderPing</span>
           </div>
           <p className="text-muted-foreground text-sm">
-            &copy; {new Date().getFullYear()} OrderPing. For modern Indian food courts.
+            OrderPing — Made for Gaur City Mall, Noida. Zero upfront cost for vendors.
           </p>
           <div className="flex items-center gap-4">
             <Link href="/admin" className="text-sm text-muted-foreground hover:text-foreground">

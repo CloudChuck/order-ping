@@ -496,6 +496,18 @@ export default function VendorDashboard() {
                           Select
                         </Button>
                       )}
+                      {order.status === "ready" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs border-accent/50 text-accent hover:bg-accent/10"
+                          onClick={() => handleNudge(order.receiptNumber)}
+                          data-testid={`button-nudge-ready-${order.receiptNumber}`}
+                        >
+                          <Bell className="mr-1 h-3 w-3" />
+                          Nudge
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}

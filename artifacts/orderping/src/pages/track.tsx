@@ -146,8 +146,7 @@ export default function Track() {
         queryClient.invalidateQueries({
           queryKey: getGetOrderQueryKey(slug, trackedReceipt),
         });
-        playChime();
-        vibrateDevice();
+        triggerReady();
       }
     });
     socket.on("order:updated", () => {
