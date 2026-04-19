@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { Link, useLocation } from "wouter";
+import { useState, useRef } from "react";
+import { Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -16,8 +17,34 @@ import {
 import { Input } from "@/components/ui/input";
 import { useCreateStall } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, CheckCircle2, Download, ExternalLink } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Download,
+  ExternalLink,
+  Mail,
+  RotateCcw,
+} from "lucide-react";
+
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+async function apiPost(path: string, body: object) {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? "Request failed");
+  return data;
+}
 
 const formSchema = z.object({
   name: z.string().min(2, "Stall name must be at least 2 characters."),
@@ -27,48 +54,118 @@ const formSchema = z.object({
   slug: z.string().optional(),
 });
 
+type FormValues = z.infer<typeof formSchema>;
+
+type Step = "form" | "otp" | "done";
+
 export default function Register() {
-  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const createStall = useCreateStall();
-  const [registeredSlug, setRegisteredSlug] = useState<string | null>(null);
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const [step, setStep] = useState<Step>("form");
+  const [pendingValues, setPendingValues] = useState<FormValues | null>(null);
+  const [otpCode, setOtpCode] = useState("");
+  const [registeredSlug, setRegisteredSlug] = useState<string | null>(null);
+  const otpInputsRef = useRef<(HTMLInputElement | null)[]>([]);
+
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      mallName: "",
-      email: "",
-      password: "",
-      slug: "",
-    },
+    defaultValues: { name: "", mallName: "", email: "", password: "", slug: "" },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    createStall.mutate(
-      { data: values },
+  const sendOtp = useMutation({
+    mutationFn: (email: string) => apiPost("/api/vendor/send-otp", { email }),
+  });
+
+  const verifyOtp = useMutation({
+    mutationFn: ({ email, otp }: { email: string; otp: string }) =>
+      apiPost("/api/vendor/verify-otp", { email, otp }),
+  });
+
+  function onFormSubmit(values: FormValues) {
+    setPendingValues(values);
+    sendOtp.mutate(values.email, {
+      onSuccess: () => {
+        setStep("otp");
+        setOtpCode("");
+        toast({ title: "Code sent!", description: `Check ${values.email} for your 6-digit code.` });
+      },
+      onError: (err: any) => {
+        toast({
+          variant: "destructive",
+          title: "Could not send code",
+          description: err.message ?? "Please try again.",
+        });
+      },
+    });
+  }
+
+  function handleOtpInput(e: React.ChangeEvent<HTMLInputElement>, idx: number) {
+    const val = e.target.value.replace(/\D/g, "").slice(-1);
+    const chars = otpCode.split("");
+    chars[idx] = val;
+    const next = chars.join("").slice(0, 6);
+    setOtpCode(next);
+    if (val && idx < 5) {
+      otpInputsRef.current[idx + 1]?.focus();
+    }
+  }
+
+  function handleOtpKeyDown(e: React.KeyboardEvent<HTMLInputElement>, idx: number) {
+    if (e.key === "Backspace" && !otpCode[idx] && idx > 0) {
+      otpInputsRef.current[idx - 1]?.focus();
+    }
+  }
+
+  function handleVerify() {
+    if (!pendingValues || otpCode.length < 6) return;
+    verifyOtp.mutate(
+      { email: pendingValues.email, otp: otpCode },
       {
-        onSuccess: (data) => {
-          toast({
-            title: "Registration successful!",
-            description: "Your stall has been registered.",
-          });
-          setRegisteredSlug(data.slug);
-          // Store auth token equivalent so they can auto-login or access dashboard
-          sessionStorage.setItem(`vendor_auth_${data.slug}`, "true");
+        onSuccess: () => {
+          createStall.mutate(
+            { data: pendingValues },
+            {
+              onSuccess: (data) => {
+                sessionStorage.setItem(`vendor_auth_${data.slug}`, "true");
+                setRegisteredSlug(data.slug);
+                setStep("done");
+              },
+              onError: (err: any) => {
+                toast({
+                  variant: "destructive",
+                  title: "Registration failed",
+                  description: err?.message ?? "There was a problem registering your stall.",
+                });
+              },
+            },
+          );
         },
-        onError: (error: any) => {
+        onError: (err: any) => {
           toast({
             variant: "destructive",
-            title: "Registration failed",
-            description: error?.message || "There was a problem registering your stall.",
+            title: "Invalid code",
+            description: err.message ?? "The code is incorrect or expired.",
           });
+          setOtpCode("");
+          otpInputsRef.current[0]?.focus();
         },
-      }
+      },
     );
   }
 
-  if (registeredSlug) {
+  function handleResend() {
+    if (!pendingValues) return;
+    setOtpCode("");
+    sendOtp.mutate(pendingValues.email, {
+      onSuccess: () =>
+        toast({ title: "New code sent!", description: `Check ${pendingValues.email}.` }),
+      onError: (err: any) =>
+        toast({ variant: "destructive", title: "Failed to resend", description: err.message }),
+    });
+  }
+
+  if (step === "done" && registeredSlug) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-background">
         <Card className="w-full max-w-md border-primary/20 shadow-lg shadow-primary/5">
@@ -86,24 +183,23 @@ export default function Register() {
                 Print this and display it at your counter for customers to scan.
               </p>
               <div className="bg-white p-4 inline-block rounded-lg mb-4">
-                {/* Real QR code would be fetched from API, using placeholder for demo */}
-                <img 
-                  src={`/api/stalls/${registeredSlug}/qr-code`} 
-                  alt="Stall QR Code" 
+                <img
+                  src={`${BASE}/api/stalls/${registeredSlug}/qr-code`}
+                  alt="Stall QR Code"
                   className="w-48 h-48 object-contain"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f4f4f5'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%2352525b'%3EQR Code Preview%3C/text%3E%3C/svg%3E";
+                    (e.target as HTMLImageElement).src =
+                      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f4f4f5'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%2352525b'%3EQR Code%3C/text%3E%3C/svg%3E";
                   }}
                 />
               </div>
               <Button asChild variant="outline" className="w-full" data-testid="button-download-qr">
-                <a href={`/api/stalls/${registeredSlug}/qr-code`} download>
+                <a href={`${BASE}/api/stalls/${registeredSlug}/qr-code`} download>
                   <Download className="mr-2 h-4 w-4" />
-                  Download PDF / PNG
+                  Download QR Code
                 </a>
               </Button>
             </div>
-            
             <Button asChild className="w-full" size="lg" data-testid="link-vendor-dashboard">
               <Link href={`/vendor/${registeredSlug}`}>
                 Go to Vendor Dashboard <ExternalLink className="ml-2 h-4 w-4" />
@@ -111,6 +207,82 @@ export default function Register() {
             </Button>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  if (step === "otp" && pendingValues) {
+    const isBusy = verifyOtp.isPending || createStall.isPending;
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <header className="p-4 border-b border-border/40">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => { setStep("form"); setOtpCode(""); }}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
+        </header>
+        <div className="flex-1 flex items-center justify-center p-4">
+          <Card className="w-full max-w-sm">
+            <CardHeader className="text-center">
+              <div className="mx-auto h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center mb-3">
+                <Mail className="h-6 w-6 text-primary" />
+              </div>
+              <CardTitle className="text-xl">Check your email</CardTitle>
+              <CardDescription>
+                We sent a 6-digit code to{" "}
+                <span className="font-medium text-foreground">{pendingValues.email}</span>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex justify-center gap-2" data-testid="otp-input-group">
+                {Array.from({ length: 6 }).map((_, idx) => (
+                  <input
+                    key={idx}
+                    ref={(el) => { otpInputsRef.current[idx] = el; }}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={otpCode[idx] ?? ""}
+                    onChange={(e) => handleOtpInput(e, idx)}
+                    onKeyDown={(e) => handleOtpKeyDown(e, idx)}
+                    onFocus={(e) => e.target.select()}
+                    className="w-11 h-14 text-center text-2xl font-mono font-bold rounded-lg border border-border bg-muted focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
+                    data-testid={`otp-digit-${idx}`}
+                  />
+                ))}
+              </div>
+
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={handleVerify}
+                disabled={otpCode.length < 6 || isBusy}
+                data-testid="button-verify-otp"
+              >
+                {isBusy ? "Verifying..." : "Verify & Create Stall"}
+              </Button>
+
+              <div className="flex items-center justify-center gap-2 pt-1">
+                <span className="text-sm text-muted-foreground">Didn't get the code?</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-primary h-auto py-0 px-1"
+                  onClick={handleResend}
+                  disabled={sendOtp.isPending}
+                  data-testid="button-resend-otp"
+                >
+                  <RotateCcw className="mr-1 h-3 w-3" />
+                  Resend
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -136,7 +308,7 @@ export default function Register() {
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={form.handleSubmit(onFormSubmit)} className="space-y-4">
                 <FormField
                   control={form.control}
                   name="name"
@@ -157,7 +329,7 @@ export default function Register() {
                     <FormItem>
                       <FormLabel>Mall / Location Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g. Pacific Mall" {...field} data-testid="input-mall-name" />
+                        <Input placeholder="e.g. Gaur City Mall" {...field} data-testid="input-mall-name" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -172,6 +344,7 @@ export default function Register() {
                       <FormControl>
                         <Input type="email" placeholder="vendor@example.com" {...field} data-testid="input-email" />
                       </FormControl>
+                      <FormDescription>We'll send a verification code here.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -203,14 +376,15 @@ export default function Register() {
                     </FormItem>
                   )}
                 />
-                <Button 
-                  type="submit" 
-                  className="w-full" 
-                  size="lg" 
-                  disabled={createStall.isPending}
+                <Button
+                  type="submit"
+                  className="w-full"
+                  size="lg"
+                  disabled={sendOtp.isPending}
                   data-testid="button-submit-register"
                 >
-                  {createStall.isPending ? "Registering..." : "Register Stall"}
+                  <Mail className="mr-2 h-4 w-4" />
+                  {sendOtp.isPending ? "Sending code..." : "Send Verification Code"}
                 </Button>
               </form>
             </Form>

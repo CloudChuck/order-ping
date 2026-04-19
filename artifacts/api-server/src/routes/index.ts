@@ -3,10 +3,12 @@ import healthRouter from "./health";
 import stallsRouter from "./stalls";
 import ordersRouter from "./orders";
 import analyticsRouter from "./analytics";
+import vendorRouter from "./vendor";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(vendorRouter);
 router.use(stallsRouter);
 router.use(ordersRouter);
 router.use(analyticsRouter);
