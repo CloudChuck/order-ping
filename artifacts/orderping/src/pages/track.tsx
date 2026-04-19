@@ -78,15 +78,15 @@ function NotificationPrePrompt({
       <div
         className="relative w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl"
         style={{
-          background: "linear-gradient(160deg, #1a1208 0%, #0f0d0a 100%)",
-          border: "1px solid rgba(251,146,60,0.3)",
-          boxShadow: "0 0 60px rgba(251,146,60,0.12), 0 24px 48px rgba(0,0,0,0.6)",
+          background: "linear-gradient(160deg, #0a1a18 0%, #0a0f0e 100%)",
+          border: "1px solid rgba(13,148,136,0.35)",
+          boxShadow: "0 0 60px rgba(13,148,136,0.12), 0 24px 48px rgba(0,0,0,0.6)",
         }}
       >
-        {/* Warm glow top */}
+        {/* Teal glow top */}
         <div
           className="absolute top-0 left-0 right-0 h-1 rounded-t-3xl"
-          style={{ background: "linear-gradient(90deg, #f97316, #fb923c, #fbbf24)" }}
+          style={{ background: "linear-gradient(90deg, #0d9488, #14b8a6, #0d9488)" }}
         />
 
         {/* Skip button */}
@@ -105,21 +105,21 @@ function NotificationPrePrompt({
             <div
               className="absolute inset-0 rounded-full"
               style={{
-                background: "radial-gradient(circle, rgba(251,146,60,0.25) 0%, transparent 70%)",
+                background: "radial-gradient(circle, rgba(13,148,136,0.25) 0%, transparent 70%)",
                 animation: "ping 1.8s cubic-bezier(0,0,0.2,1) infinite",
               }}
             />
             <div
               className="relative h-20 w-20 rounded-full flex items-center justify-center"
               style={{
-                background: "linear-gradient(135deg, rgba(251,146,60,0.2), rgba(249,115,22,0.1))",
-                border: "1.5px solid rgba(251,146,60,0.4)",
+                background: "rgba(13,148,136,0.15)",
+                border: "1.5px solid rgba(13,148,136,0.4)",
               }}
             >
               <Bell
                 className="h-9 w-9"
                 style={{
-                  color: "#fb923c",
+                  color: "#0d9488",
                   animation: "bellRing 1.4s ease-in-out infinite",
                   transformOrigin: "top center",
                 }}
@@ -130,17 +130,17 @@ function NotificationPrePrompt({
           {/* Quote */}
           <p
             className="text-xl font-bold leading-snug mb-2"
-            style={{ color: "#fef3c7" }}
+            style={{ color: "#f0fdfa" }}
           >
             Your food is cooking.
           </p>
           <p
             className="text-lg font-semibold leading-snug mb-4"
-            style={{ color: "#fcd34d" }}
+            style={{ color: "#5eead4" }}
           >
             Don't miss the moment it's ready.
           </p>
-          <p className="text-sm leading-relaxed mb-8" style={{ color: "rgba(253,230,138,0.55)" }}>
+          <p className="text-sm leading-relaxed mb-8" style={{ color: "rgba(153,246,228,0.55)" }}>
             We'll alert your phone the instant the vendor calls your token —
             no need to keep staring at the screen.
           </p>
@@ -150,9 +150,9 @@ function NotificationPrePrompt({
             onClick={onAllow}
             className="w-full py-4 px-6 rounded-2xl font-bold text-base transition-all active:scale-95 mb-3"
             style={{
-              background: "linear-gradient(135deg, #f97316, #ea580c)",
+              background: "#0d9488",
               color: "#fff",
-              boxShadow: "0 4px 24px rgba(249,115,22,0.45)",
+              boxShadow: "0 4px 24px rgba(13,148,136,0.4)",
             }}
             data-testid="button-allow-notification"
           >
@@ -163,9 +163,9 @@ function NotificationPrePrompt({
           <button
             onClick={onSkip}
             className="text-sm transition-colors"
-            style={{ color: "rgba(253,186,116,0.5)" }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(253,186,116,0.8)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(253,186,116,0.5)")}
+            style={{ color: "rgba(153,246,228,0.45)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(153,246,228,0.75)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(153,246,228,0.45)")}
             data-testid="button-skip-notification-link"
           >
             No thanks, I'll keep checking manually
