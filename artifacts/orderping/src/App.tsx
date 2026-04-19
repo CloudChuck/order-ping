@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Register from "@/pages/register";
 import VendorDashboard from "@/pages/vendor-dashboard";
+import VendorLogin from "@/pages/vendor-login";
 import Track from "@/pages/track";
 import Admin from "@/pages/admin";
 
@@ -24,8 +25,10 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/register" component={Register} />
+      <Route path="/vendor-login" component={VendorLogin} />
       <Route path="/vendor/:slug" component={VendorDashboard} />
       <Route path="/track/:slug" component={Track} />
+      <Route path="/s/:slug" component={Track} />
       <Route path="/admin" component={Admin} />
       <Route component={NotFound} />
     </Switch>

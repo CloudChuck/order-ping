@@ -1,10 +1,22 @@
-import { Link } from "wouter";
+import { useState } from "react";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Store, QrCode, BellRing, Utensils, CheckCircle2, Smartphone, ShieldCheck, Volume2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ArrowRight, Store, QrCode, BellRing, Utensils, CheckCircle2, Smartphone, ShieldCheck, Volume2, Search } from "lucide-react";
 
 export default function Home() {
+  const [, setLocation] = useLocation();
+  const [lookupSlug, setLookupSlug] = useState("");
+  const [lookupToken, setLookupToken] = useState("");
+
+  function handleLookup(e: React.FormEvent) {
+    e.preventDefault();
+    if (!lookupSlug.trim() || !lookupToken.trim()) return;
+    setLocation(`/track/${lookupSlug.trim().toLowerCase()}?token=${lookupToken.trim()}`);
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       {/* Header */}
@@ -56,6 +68,41 @@ export default function Home() {
                 </Button>
               </Link>
             </div>
+          </div>
+        </section>
+
+        {/* Order Lookup Banner */}
+        <section className="bg-card/60 border-y border-border/40 py-6">
+          <div className="container mx-auto px-4 max-w-2xl">
+            <p className="text-center text-sm text-muted-foreground mb-3 font-medium">
+              Already have an order? Track it here:
+            </p>
+            <form onSubmit={handleLookup} className="flex flex-col sm:flex-row gap-2">
+              <Input
+                value={lookupSlug}
+                onChange={(e) => setLookupSlug(e.target.value)}
+                placeholder="Stall name (e.g. haldirams)"
+                className="h-11"
+                data-testid="input-lookup-slug"
+              />
+              <Input
+                value={lookupToken}
+                onChange={(e) => setLookupToken(e.target.value)}
+                placeholder="Token / receipt number"
+                className="h-11 font-mono"
+                inputMode="numeric"
+                data-testid="input-lookup-token"
+              />
+              <Button
+                type="submit"
+                className="h-11 sm:w-auto w-full"
+                disabled={!lookupSlug.trim() || !lookupToken.trim()}
+                data-testid="button-lookup-order"
+              >
+                <Search className="mr-2 h-4 w-4" />
+                Track My Order
+              </Button>
+            </form>
           </div>
         </section>
 

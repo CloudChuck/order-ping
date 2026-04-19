@@ -214,6 +214,12 @@ export default function Register() {
                 </Button>
               </form>
             </Form>
+            <p className="text-center text-sm text-muted-foreground mt-4">
+              Already registered?{" "}
+              <Link href="/vendor-login" className="text-primary hover:underline font-medium">
+                Log in to your dashboard
+              </Link>
+            </p>
           </CardContent>
         </Card>
       </div>

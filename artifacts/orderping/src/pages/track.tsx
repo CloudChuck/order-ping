@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, Link } from "wouter";
+import { useParams, Link, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -64,8 +64,11 @@ function useWakeLock() {
 export default function Track() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug ?? "";
-  const [receiptInput, setReceiptInput] = useState("");
+  const search = useSearch();
+  const urlToken = new URLSearchParams(search).get("token") ?? "";
+  const [receiptInput, setReceiptInput] = useState(urlToken);
   const [trackedReceipt, setTrackedReceipt] = useState<string | null>(null);
+  const autoRegistered = useRef(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [showReadyFlash, setShowReadyFlash] = useState(false);
   const alreadyTriggered = useRef(false);
@@ -108,6 +111,26 @@ export default function Track() {
   );
 
   const createOrder = useCreateOrder();
+
+  useEffect(() => {
+    if (!urlToken || autoRegistered.current) return;
+    autoRegistered.current = true;
+    const receipt = urlToken.trim();
+    createOrder.mutate(
+      { slug, data: { receiptNumber: receipt } },
+      {
+        onSuccess: () => {
+          setTrackedReceipt(receipt);
+          alreadyTriggered.current = false;
+          queryClient.invalidateQueries({ queryKey: getGetQueueStatusQueryKey(slug) });
+        },
+        onError: () => {
+          setTrackedReceipt(receipt);
+        },
+      },
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlToken]);
 
   const triggerReady = useCallback(() => {
     if (alreadyTriggered.current) return;
