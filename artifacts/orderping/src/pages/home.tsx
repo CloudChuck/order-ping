@@ -1,15 +1,178 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, Store, QrCode, BellRing, Utensils, CheckCircle2, Smartphone, ShieldCheck, Volume2, Search } from "lucide-react";
+import {
+  ArrowRight,
+  Store,
+  QrCode,
+  BellRing,
+  Utensils,
+  CheckCircle2,
+  Smartphone,
+  ShieldCheck,
+  Volume2,
+  Search,
+} from "lucide-react";
+import { useListStalls, getListStallsQueryKey } from "@workspace/api-client-react";
+
+type StallItem = { name: string; mallName: string; slug: string };
+
+function initials(name: string): string {
+  return name
+    .split(/[\s\-_]+/)
+    .map((w) => w[0] ?? "")
+    .join("")
+    .toLowerCase();
+}
+
+function matchesQuery(stall: StallItem, query: string): boolean {
+  if (!query) return true;
+  const q = query.toLowerCase().replace(/\s+/g, "");
+  const name = stall.name.toLowerCase();
+  const slug = stall.slug.toLowerCase();
+  const ini = initials(stall.name);
+  return (
+    name.includes(q) ||
+    slug.includes(q) ||
+    ini.startsWith(q) ||
+    ini.includes(q)
+  );
+}
+
+function StallAutocomplete({
+  value,
+  onChange,
+  onSelect,
+  stalls,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onSelect: (slug: string) => void;
+  stalls: StallItem[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [activeIdx, setActiveIdx] = useState(-1);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const suggestions = stalls.filter((s) => matchesQuery(s, value)).slice(0, 8);
+
+  useEffect(() => {
+    setActiveIdx(-1);
+  }, [value]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!open || suggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIdx((i) => Math.min(i + 1, suggestions.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIdx((i) => Math.max(i - 1, -1));
+    } else if (e.key === "Enter" && activeIdx >= 0) {
+      e.preventDefault();
+      const s = suggestions[activeIdx];
+      if (s) {
+        onChange(s.slug);
+        onSelect(s.slug);
+        setOpen(false);
+      }
+    } else if (e.key === "Escape") {
+      setOpen(false);
+    }
+  }
+
+  function handleSelect(stall: StallItem) {
+    onChange(stall.slug);
+    onSelect(stall.slug);
+    setOpen(false);
+    inputRef.current?.blur();
+  }
+
+  const showDropdown = open && suggestions.length > 0;
+
+  return (
+    <div ref={containerRef} className="relative flex-1">
+      <Input
+        ref={inputRef}
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+        onKeyDown={handleKeyDown}
+        placeholder="Stall name (e.g. haldirams)"
+        className="h-11"
+        autoComplete="off"
+        data-testid="input-lookup-slug"
+      />
+
+      {showDropdown && (
+        <div className="absolute z-50 top-[calc(100%+4px)] left-0 right-0 bg-card border border-border rounded-xl shadow-xl overflow-hidden">
+          {suggestions.map((stall, idx) => {
+            const ini = initials(stall.name).toUpperCase();
+            return (
+              <button
+                key={stall.slug}
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  handleSelect(stall);
+                }}
+                onMouseEnter={() => setActiveIdx(idx)}
+                className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+                  idx === activeIdx
+                    ? "bg-primary/10 text-foreground"
+                    : "hover:bg-muted"
+                } ${idx !== 0 ? "border-t border-border/50" : ""}`}
+                data-testid={`suggestion-${stall.slug}`}
+              >
+                <div className="h-8 w-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                  <span className="text-xs font-bold text-primary">{ini.slice(0, 2)}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm truncate">{stall.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{stall.mallName}</p>
+                </div>
+                <span className="text-xs font-mono text-muted-foreground shrink-0">
+                  {stall.slug}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Home() {
   const [, setLocation] = useLocation();
   const [lookupSlug, setLookupSlug] = useState("");
   const [lookupToken, setLookupToken] = useState("");
+
+  const stallsQuery = useListStalls({
+    query: { staleTime: 60_000, queryKey: getListStallsQueryKey() },
+  });
+  const stalls: StallItem[] = (stallsQuery.data ?? []).map((s) => ({
+    name: s.name,
+    mallName: s.mallName,
+    slug: s.slug,
+  }));
 
   function handleLookup(e: React.FormEvent) {
     e.preventDefault();
@@ -53,7 +216,7 @@ export default function Home() {
               The <span className="text-primary">kitchen display board</span> <br /> for your customers' phones.
             </h1>
             <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
-              Ditch the clunky pagers. Vendor calls the number, customer's phone buzzes. 
+              Ditch the clunky pagers. Vendor calls the number, customer's phone buzzes.
               The fastest way to manage food court orders.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -78,18 +241,17 @@ export default function Home() {
               Already have an order? Track it here:
             </p>
             <form onSubmit={handleLookup} className="flex flex-col sm:flex-row gap-2">
-              <Input
+              <StallAutocomplete
                 value={lookupSlug}
-                onChange={(e) => setLookupSlug(e.target.value)}
-                placeholder="Stall name (e.g. haldirams)"
-                className="h-11"
-                data-testid="input-lookup-slug"
+                onChange={setLookupSlug}
+                onSelect={(slug) => setLookupSlug(slug)}
+                stalls={stalls}
               />
               <Input
                 value={lookupToken}
                 onChange={(e) => setLookupToken(e.target.value)}
                 placeholder="Token / receipt number"
-                className="h-11 font-mono"
+                className="h-11 font-mono sm:w-40"
                 inputMode="numeric"
                 data-testid="input-lookup-token"
               />
@@ -100,7 +262,7 @@ export default function Home() {
                 data-testid="button-lookup-order"
               >
                 <Search className="mr-2 h-4 w-4" />
-                Track My Order
+                Track
               </Button>
             </form>
           </div>
@@ -219,7 +381,7 @@ export default function Home() {
                     "Works instantly on any smartphone",
                     "Bilingual interface (English & Hindi)",
                     "Real-time queue tracking",
-                    "Loud chime and vibration alerts"
+                    "Loud chime and vibration alerts",
                   ].map((feature, i) => (
                     <li key={i} className="flex items-center gap-3 text-lg">
                       <CheckCircle2 className="h-6 w-6 text-primary shrink-0" />
@@ -234,7 +396,7 @@ export default function Home() {
                 <div className="relative mx-auto w-[300px] h-[600px] bg-black rounded-[3rem] border-[8px] border-zinc-800 shadow-2xl overflow-hidden flex flex-col">
                   {/* Notch */}
                   <div className="absolute top-0 inset-x-0 h-6 bg-zinc-800 rounded-b-3xl w-40 mx-auto z-20"></div>
-                  
+
                   {/* Screen Content */}
                   <div className="flex-1 bg-card flex flex-col p-6 pt-12">
                     <div className="text-center mb-8">
@@ -242,7 +404,7 @@ export default function Home() {
                         <Utensils className="h-6 w-6" />
                       </div>
                       <h3 className="font-bold text-xl">Haldiram's</h3>
-                      <p className="text-sm text-muted-foreground">Pacific Mall</p>
+                      <p className="text-sm text-muted-foreground">Gaur City Mall</p>
                     </div>
 
                     <Card className="border-primary/50 bg-primary/5 mb-6">
@@ -262,7 +424,7 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Decorative background elements */}
                 <div className="absolute -inset-4 bg-primary/20 blur-3xl -z-10 rounded-full opacity-50"></div>
               </div>
