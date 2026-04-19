@@ -12,7 +12,7 @@ import {
   getGetQueueStatusQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, WifiOff, CheckCircle2, Clock, Search } from "lucide-react";
+import { ArrowLeft, WifiOff, CheckCircle2, Clock, Search, Bell, X } from "lucide-react";
 import { io } from "socket.io-client";
 
 function playChime() {
@@ -61,6 +61,141 @@ function useWakeLock() {
   }, []);
 }
 
+/* ── Notification Pre-Prompt Modal ─────────────────────────────── */
+function NotificationPrePrompt({
+  onAllow,
+  onSkip,
+}: {
+  onAllow: () => void;
+  onSkip: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)" }}
+      data-testid="notification-preprompt"
+    >
+      <div
+        className="relative w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl"
+        style={{
+          background: "linear-gradient(160deg, #1a1208 0%, #0f0d0a 100%)",
+          border: "1px solid rgba(251,146,60,0.3)",
+          boxShadow: "0 0 60px rgba(251,146,60,0.12), 0 24px 48px rgba(0,0,0,0.6)",
+        }}
+      >
+        {/* Warm glow top */}
+        <div
+          className="absolute top-0 left-0 right-0 h-1 rounded-t-3xl"
+          style={{ background: "linear-gradient(90deg, #f97316, #fb923c, #fbbf24)" }}
+        />
+
+        {/* Skip button */}
+        <button
+          onClick={onSkip}
+          className="absolute top-4 right-4 text-orange-300/50 hover:text-orange-300/80 transition-colors"
+          data-testid="button-skip-notification"
+          aria-label="Skip"
+        >
+          <X className="h-5 w-5" />
+        </button>
+
+        <div className="p-8 pt-10 flex flex-col items-center text-center">
+          {/* Animated bell */}
+          <div className="relative mb-6">
+            <div
+              className="absolute inset-0 rounded-full"
+              style={{
+                background: "radial-gradient(circle, rgba(251,146,60,0.25) 0%, transparent 70%)",
+                animation: "ping 1.8s cubic-bezier(0,0,0.2,1) infinite",
+              }}
+            />
+            <div
+              className="relative h-20 w-20 rounded-full flex items-center justify-center"
+              style={{
+                background: "linear-gradient(135deg, rgba(251,146,60,0.2), rgba(249,115,22,0.1))",
+                border: "1.5px solid rgba(251,146,60,0.4)",
+              }}
+            >
+              <Bell
+                className="h-9 w-9"
+                style={{
+                  color: "#fb923c",
+                  animation: "bellRing 1.4s ease-in-out infinite",
+                  transformOrigin: "top center",
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Quote */}
+          <p
+            className="text-xl font-bold leading-snug mb-2"
+            style={{ color: "#fef3c7" }}
+          >
+            Your food is cooking.
+          </p>
+          <p
+            className="text-lg font-semibold leading-snug mb-4"
+            style={{ color: "#fcd34d" }}
+          >
+            Don't miss the moment it's ready.
+          </p>
+          <p className="text-sm leading-relaxed mb-8" style={{ color: "rgba(253,230,138,0.55)" }}>
+            We'll alert your phone the instant the vendor calls your token —
+            no need to keep staring at the screen.
+          </p>
+
+          {/* CTA */}
+          <button
+            onClick={onAllow}
+            className="w-full py-4 px-6 rounded-2xl font-bold text-base transition-all active:scale-95 mb-3"
+            style={{
+              background: "linear-gradient(135deg, #f97316, #ea580c)",
+              color: "#fff",
+              boxShadow: "0 4px 24px rgba(249,115,22,0.45)",
+            }}
+            data-testid="button-allow-notification"
+          >
+            Yes, Notify Me When Ready! 🔔
+          </button>
+
+          {/* Skip link */}
+          <button
+            onClick={onSkip}
+            className="text-sm transition-colors"
+            style={{ color: "rgba(253,186,116,0.5)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(253,186,116,0.8)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(253,186,116,0.5)")}
+            data-testid="button-skip-notification-link"
+          >
+            No thanks, I'll keep checking manually
+          </button>
+        </div>
+      </div>
+
+      {/* Bell ring keyframe + ping animation injected inline */}
+      <style>{`
+        @keyframes bellRing {
+          0%,100% { transform: rotate(0deg); }
+          10%      { transform: rotate(14deg); }
+          20%      { transform: rotate(-12deg); }
+          30%      { transform: rotate(10deg); }
+          40%      { transform: rotate(-8deg); }
+          50%      { transform: rotate(6deg); }
+          60%      { transform: rotate(-4deg); }
+          70%      { transform: rotate(2deg); }
+          80%      { transform: rotate(-2deg); }
+          90%      { transform: rotate(1deg); }
+        }
+        @keyframes ping {
+          75%, 100% { transform: scale(2); opacity: 0; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+/* ── Main Track Component ───────────────────────────────────────── */
 export default function Track() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug ?? "";
@@ -73,6 +208,10 @@ export default function Track() {
   const [showReadyFlash, setShowReadyFlash] = useState(false);
   const alreadyTriggered = useRef(false);
   const queryClient = useQueryClient();
+
+  // Notification pre-prompt state
+  const [showNotifPrompt, setShowNotifPrompt] = useState(false);
+  const notifPromptShown = useRef(false);
 
   useWakeLock();
 
@@ -112,6 +251,25 @@ export default function Track() {
 
   const createOrder = useCreateOrder();
 
+  // Show notification pre-prompt once the customer starts tracking
+  function maybeShowNotifPrompt() {
+    if (notifPromptShown.current) return;
+    if (!("Notification" in window)) return;
+    if (Notification.permission !== "default") return;
+    notifPromptShown.current = true;
+    // Short delay so the tracking UI settles first
+    setTimeout(() => setShowNotifPrompt(true), 600);
+  }
+
+  function handleAllowNotification() {
+    setShowNotifPrompt(false);
+    Notification.requestPermission().catch(() => {});
+  }
+
+  function handleSkipNotification() {
+    setShowNotifPrompt(false);
+  }
+
   useEffect(() => {
     if (!urlToken || autoRegistered.current) return;
     autoRegistered.current = true;
@@ -123,9 +281,11 @@ export default function Track() {
           setTrackedReceipt(receipt);
           alreadyTriggered.current = false;
           queryClient.invalidateQueries({ queryKey: getGetQueueStatusQueryKey(slug) });
+          maybeShowNotifPrompt();
         },
         onError: () => {
           setTrackedReceipt(receipt);
+          maybeShowNotifPrompt();
         },
       },
     );
@@ -196,9 +356,11 @@ export default function Track() {
           queryClient.invalidateQueries({
             queryKey: getGetQueueStatusQueryKey(slug),
           });
+          maybeShowNotifPrompt();
         },
         onError: () => {
           setTrackedReceipt(receipt);
+          maybeShowNotifPrompt();
         },
       },
     );
@@ -227,6 +389,14 @@ export default function Track() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
+      {/* Notification Pre-Prompt */}
+      {showNotifPrompt && (
+        <NotificationPrePrompt
+          onAllow={handleAllowNotification}
+          onSkip={handleSkipNotification}
+        />
+      )}
+
       {/* Ready Flash Overlay */}
       {showReadyFlash && (
         <div
