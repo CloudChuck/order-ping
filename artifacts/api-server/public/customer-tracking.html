@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OrderPing - Track Your Order</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>OrderPing</h1>
+      <p>Track your order in real-time</p>
+    </header>
+    <main>
+      <div id="order-status" class="status-container">
+        <div class="token-display">
+          <h2>Token: <span id="token-number">--</span></h2>
+        </div>
+        <div class="status-display">
+          <div class="status-badge" id="status-badge">Waiting...</div>
+          <p id="status-message">Please wait while we prepare your order.</p>
+        </div>
+        <div class="progress-bar">
+          <div id="progress-fill" class="progress-fill"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="/config.js"></script>
+  <script type="module" src="/js/customer.js"></script>
+</body>
+</html>
