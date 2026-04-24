@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OrderPing - TV Display Board</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body class="tv-mode">
+  <div id="app">
+    <header class="tv-header">
+      <h1>OrderPing</h1>
+      <p>Order Status Board</p>
+    </header>
+    <main class="tv-main">
+      <div class="tv-columns">
+        <div class="tv-column preparing">
+          <h2>Preparing</h2>
+          <div id="preparing-list" class="token-list"></div>
+        </div>
+        <div class="tv-column ready">
+          <h2>Ready to Collect</h2>
+          <div id="ready-list" class="token-list"></div>
+        </div>
+        <div class="tv-column served">
+          <h2>Served</h2>
+          <div id="served-list" class="token-list"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="/config.js"></script>
+  <script type="module" src="/js/tv-display.js"></script>
+</body>
+</html>
