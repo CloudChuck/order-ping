@@ -10,6 +10,7 @@ import VendorDashboard from "@/pages/vendor-dashboard";
 import VendorLogin from "@/pages/vendor-login";
 import Track from "@/pages/track";
 import Admin from "@/pages/admin";
+import DisplayBoard from "@/pages/display"; // TASK 5
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,6 +31,7 @@ function Router() {
       <Route path="/track/:slug" component={Track} />
       <Route path="/s/:slug" component={Track} />
       <Route path="/admin" component={Admin} />
+      <Route path="/display/:stallId" component={DisplayBoard} /> {/* TASK 5 */}
       <Route component={NotFound} />
     </Switch>
   );
