@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OrderPing - Vendor Dashboard</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>OrderPing</h1>
+      <p>Vendor Dashboard</p>
+    </header>
+    <main>
+      <div class="dashboard-container">
+        <div class="orders-panel">
+          <h2>Active Orders</h2>
+          <div id="orders-list" class="orders-list"></div>
+        </div>
+        <div class="controls-panel">
+          <h2>Controls</h2>
+          <button id="btn-ready" class="btn btn-success">Mark Ready</button>
+          <button id="btn-served" class="btn btn-primary">Mark Served</button>
+          <button id="btn-cancel" class="btn btn-danger">Cancel Order</button>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="/config.js"></script>
+  <script type="module" src="/js/vendor.js"></script>
+</body>
+</html>
