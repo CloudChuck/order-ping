@@ -37,26 +37,11 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files (customer tracking page, vendor dashboard, TV display)
-app.use(express.static(path.join(__dirname, "../public")));
+// Serve built React frontend static files
+app.use(express.static(path.resolve(__dirname, "../../../artifacts/orderping/dist/public")));
 
 // API routes
 app.use("/api", router);
-
-// Serve customer tracking page
-app.get("/track/:tokenId?", (req, res) => {
-  res.sendFile(path.join(__dirname, "../public/customer-tracking.html"));
-});
-
-// Serve vendor dashboard
-app.get("/vendor/dashboard", (req, res) => {
-  res.sendFile(path.join(__dirname, "../public/vendor-dashboard.html"));
-});
-
-// Serve TV display board
-app.get("/vendor/tv-display", (req, res) => {
-  res.sendFile(path.join(__dirname, "../public/tv-display.html"));
-});
 
 // Health check endpoint
 app.get("/health", (req, res) => {
@@ -67,13 +52,20 @@ app.get("/health", (req, res) => {
   });
 });
 
-// Inject Supabase URL into client-side code (for security)
+// Inject Supabase credentials into client-side
 app.get("/config.js", (req, res) => {
   res.type("application/javascript");
   res.send(`
     window.SUPABASE_URL = "${process.env.SUPABASE_URL}";
     window.SUPABASE_ANON_KEY = "${process.env.SUPABASE_ANON_KEY}";
   `);
+});
+
+// SPA fallback - send index.html for all non-API routes
+app.get("*", (req, res) => {
+  if (!req.path.startsWith("/api")) {
+    res.sendFile(path.resolve(__dirname, "../../../artifacts/orderping/dist/public/index.html"));
+  }
 });
 
 // 404 handler
