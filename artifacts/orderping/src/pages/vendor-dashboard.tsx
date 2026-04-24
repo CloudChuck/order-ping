@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+// TASK 6 — Audio TTS announcements when Ready is pressed
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -46,6 +47,17 @@ import {
   LogIn,
 } from "lucide-react";
 import { io } from "socket.io-client";
+import { Volume2, VolumeX } from "lucide-react";
+
+// TASK 6 — TTS announcement function
+function announceReady(tokenId: string, stallName: string): void {
+  if (!("speechSynthesis" in window)) return;
+  const msg    = new SpeechSynthesisUtterance(`Token ${tokenId}, your order is ready at ${stallName}`);
+  msg.lang     = "en-IN";
+  msg.volume   = 1.0;
+  msg.rate     = 0.85;
+  window.speechSynthesis.speak(msg);
+}
 
 const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
@@ -161,9 +173,9 @@ export default function VendorDashboard() {
   const slug = params.slug ?? "";
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentInput, setCurrentInput] = useState("");
-  const [pendingReadyNumber, setPendingReadyNumber] = useState<string | null>(
-    null,
-  );
+  const [pendingReadyNumber, setPendingReadyNumber] = useState<string | null>(null);
+  // TASK 6 — audio toggle (default ON), stored in React state (NOT localStorage per rules)
+  const [audioEnabled, setAudioEnabled] = useState(true);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -237,6 +249,10 @@ export default function VendorDashboard() {
       { slug, receiptNumber: pendingReadyNumber },
       {
         onSuccess: () => {
+          // TASK 6 — announce via TTS if audio is enabled
+          if (audioEnabled) {
+            announceReady(pendingReadyNumber, stall.data?.name ?? slug);
+          }
           toast({
             title: "Order Ready!",
             description: `Token #${pendingReadyNumber} has been called.`,
@@ -327,6 +343,19 @@ export default function VendorDashboard() {
                 </div>
               </div>
             )}
+            {/* TASK 6 — Audio TTS toggle */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setAudioEnabled((v) => !v)}
+              title={audioEnabled ? "Audio ON — click to mute" : "Audio OFF — click to enable"}
+              data-testid="button-audio-toggle"
+            >
+              {audioEnabled
+                ? <Volume2 className="h-4 w-4 text-primary" />
+                : <VolumeX className="h-4 w-4 text-muted-foreground" />}
+              <span className="ml-1 text-xs">{audioEnabled ? "ON" : "OFF"}</span>
+            </Button>
             <Button
               variant="ghost"
               size="sm"
