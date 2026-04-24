@@ -61,11 +61,12 @@ app.get("/config.js", (req, res) => {
   `);
 });
 
-// SPA fallback - send index.html for all non-API routes
-app.get("*", (req, res) => {
-  if (!req.path.startsWith("/api")) {
-    res.sendFile(path.resolve(__dirname, "../../../artifacts/orderping/dist/public/index.html"));
+// SPA fallback - use app.use to avoid path-to-regexp wildcard issues with Express 5
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api")) {
+    return next();
   }
+  res.sendFile(path.resolve(__dirname, "../../../artifacts/orderping/dist/public/index.html"));
 });
 
 // 404 handler
