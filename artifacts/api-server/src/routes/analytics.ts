@@ -1,10 +1,22 @@
 // TASK 1 — Updated to use async Supabase store
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
 import { getStallBySlug, getStallAnalytics, getAdminAnalytics } from "../lib/store-supabase";
 
 const router = Router();
 
-const ADMIN_PASSWORD = process.env["ADMIN_PASSWORD"] ?? "admin123";
+const ADMIN_PASSWORD = process.env["ADMIN_PASSWORD"];
+if (!ADMIN_PASSWORD) {
+  console.warn("[SECURITY] ADMIN_PASSWORD env var is not set. Admin analytics endpoint will reject all requests.");
+}
+
+const adminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // max 10 attempts per window
+  message: { error: "Too many attempts, please try again later" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 router.get("/stalls/:slug/analytics", async (req, res): Promise<void> => {
   const { slug } = req.params as { slug: string };
@@ -40,10 +52,23 @@ router.get("/stalls/:slug/analytics", async (req, res): Promise<void> => {
   });
 });
 
-router.get("/admin/analytics", async (req, res): Promise<void> => {
+router.post("/admin/analytics", adminLimiter, async (req, res): Promise<void> => {
+  const { password } = req.body as { password?: string };
+
+  if (!ADMIN_PASSWORD || password !== ADMIN_PASSWORD) {
+    res.status(401).json({ error: "Unauthorized", message: "Invalid admin password" });
+    return;
+  }
+
+  const analytics = await getAdminAnalytics();
+  res.json(analytics);
+});
+
+// Keep GET for backward compat (deprecated — will be removed)
+router.get("/admin/analytics", adminLimiter, async (req, res): Promise<void> => {
   const { password } = req.query as { password?: string };
 
-  if (password !== ADMIN_PASSWORD) {
+  if (!ADMIN_PASSWORD || password !== ADMIN_PASSWORD) {
     res.status(401).json({ error: "Unauthorized", message: "Invalid admin password" });
     return;
   }

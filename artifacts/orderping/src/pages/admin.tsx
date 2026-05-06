@@ -14,9 +14,23 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useGetAdminAnalytics, getGetAdminAnalyticsQueryKey } from "@workspace/api-client-react";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Store, Clock, Package } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+async function fetchAdminAnalytics(password: string) {
+  const res = await fetch(`${BASE}/api/admin/analytics`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password }),
+  });
+  if (!res.ok) {
+    throw new Error(res.status === 401 ? "Unauthorized" : "Request failed");
+  }
+  return res.json();
+}
 
 const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
@@ -30,16 +44,12 @@ export default function Admin() {
     defaultValues: { password: "" },
   });
 
-  const analytics = useGetAdminAnalytics(
-    { password: enteredPassword ?? "" },
-    {
-      query: {
-        enabled: !!enteredPassword,
-        queryKey: getGetAdminAnalyticsQueryKey({ password: enteredPassword ?? "" }),
-        retry: false,
-      },
-    },
-  );
+  const analytics = useQuery({
+    queryKey: ["admin-analytics", enteredPassword],
+    queryFn: () => fetchAdminAnalytics(enteredPassword!),
+    enabled: !!enteredPassword,
+    retry: false,
+  });
 
   function onSubmit(values: z.infer<typeof loginSchema>) {
     setEnteredPassword(values.password);

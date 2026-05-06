@@ -1,3 +1,5 @@
+import { randomInt } from "crypto";
+
 interface OtpEntry {
   code: string;
   expiresAt: Date;
@@ -10,7 +12,7 @@ const OTP_TTL_MS = 10 * 60 * 1000;
 const MAX_ATTEMPTS = 5;
 
 export function generateOtp(email: string): string {
-  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const code = String(randomInt(100000, 999999));
   store.set(email.toLowerCase(), {
     code,
     expiresAt: new Date(Date.now() + OTP_TTL_MS),

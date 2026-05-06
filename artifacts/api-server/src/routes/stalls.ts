@@ -1,5 +1,6 @@
 // TASK 1 — Updated to use async Supabase store (await added to all store calls)
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
 import QRCode from "qrcode";
 import {
   createStall,
@@ -9,6 +10,14 @@ import {
 } from "../lib/store-supabase";
 
 const router = Router();
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // max 10 login attempts per IP per window
+  message: { error: "Too many login attempts, please try again later" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 router.get("/stalls", async (_req, res): Promise<void> => {
   const stalls = await getAllStalls();
@@ -65,7 +74,7 @@ router.get("/stalls/:slug", async (req, res): Promise<void> => {
   });
 });
 
-router.post("/stalls/:slug/verify-password", async (req, res): Promise<void> => {
+router.post("/stalls/:slug/verify-password", loginLimiter, async (req, res): Promise<void> => {
   const { slug }     = req.params as { slug: string };
   const { password } = req.body;
   const stall        = await getStallBySlug(slug);

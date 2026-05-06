@@ -4,21 +4,32 @@ import type { Server as HttpServer } from "http";
 let io: SocketIOServer | null = null;
 
 export function initSocketIO(server: HttpServer): SocketIOServer {
+  const allowedOrigins = process.env["ALLOWED_ORIGINS"]
+    ? process.env["ALLOWED_ORIGINS"].split(",").map((o) => o.trim())
+    : "*"; // Allow all in dev; set ALLOWED_ORIGINS in production
+
   io = new SocketIOServer(server, {
     cors: {
-      origin: "*",
+      origin: allowedOrigins,
       methods: ["GET", "POST"],
+      credentials: true,
     },
     path: "/api/socket",
   });
 
   io.on("connection", (socket) => {
-    socket.on("join:stall", (slug: string) => {
+    socket.on("join:stall", (slug: unknown) => {
+      if (typeof slug !== "string" || slug.length > 100 || !/^[a-z0-9-]+$/.test(slug)) return;
       socket.join(`stall:${slug}`);
     });
 
-    socket.on("join:order", (data: { slug: string; receiptNumber: string }) => {
-      socket.join(`order:${data.slug}:${data.receiptNumber}`);
+    socket.on("join:order", (data: unknown) => {
+      if (!data || typeof data !== "object") return;
+      const { slug, receiptNumber } = data as { slug?: string; receiptNumber?: string };
+      if (typeof slug !== "string" || typeof receiptNumber !== "string") return;
+      if (slug.length > 100 || receiptNumber.length > 50) return;
+      if (!/^[a-z0-9-]+$/.test(slug)) return;
+      socket.join(`order:${slug}:${receiptNumber}`);
     });
 
     socket.on("disconnect", () => {

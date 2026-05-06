@@ -1,10 +1,27 @@
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
 import { generateOtp, verifyOtp } from "../lib/otp";
 import { sendOtpEmail } from "../lib/email";
 
 const router = Router();
 
-router.post("/vendor/send-otp", async (req, res): Promise<void> => {
+const otpSendLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // max 5 OTP requests per IP per window
+  message: { error: "Too many OTP requests, please try again later" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const otpVerifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: "Too many verification attempts, please try again later" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.post("/vendor/send-otp", otpSendLimiter, async (req, res): Promise<void> => {
   const { email } = req.body as { email?: string };
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -14,8 +31,10 @@ router.post("/vendor/send-otp", async (req, res): Promise<void> => {
 
   const otp = generateOtp(email);
 
-  // Always log so the OTP is visible in server logs during development
-  console.log(`\n[OTP] Email: ${email}  Code: ${otp}\n`);
+  // Log OTP only in development — NEVER in production
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`\n[OTP] Email: ${email}  Code: ${otp}\n`);
+  }
 
   try {
     await sendOtpEmail(email, otp);
@@ -28,7 +47,7 @@ router.post("/vendor/send-otp", async (req, res): Promise<void> => {
   }
 });
 
-router.post("/vendor/verify-otp", (req, res): void => {
+router.post("/vendor/verify-otp", otpVerifyLimiter, (req, res): void => {
   const { email, otp } = req.body as { email?: string; otp?: string };
 
   if (!email || !otp) {

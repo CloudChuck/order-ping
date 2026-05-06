@@ -6,6 +6,9 @@
 
 import { supabase } from './supabase';
 import { logAnalyticsEvent } from './analytics-logger';
+import bcrypt from 'bcrypt';
+
+const BCRYPT_ROUNDS = 12;
 
 // ─── TYPES (kept identical to original) ──────────────────────────────────────
 
@@ -91,6 +94,8 @@ export async function createStall(data: {
 
   if (existing) return { error: 'Slug already exists' };
 
+  const hashedPassword = await bcrypt.hash(data.password, BCRYPT_ROUNDS);
+
   const { data: row, error } = await supabase
     .from('stalls')
     .insert({
@@ -98,7 +103,7 @@ export async function createStall(data: {
       mall_name:     data.mallName,
       slug,
       owner_email:   data.email,
-      password_hash: data.password,
+      password_hash: hashedPassword,
       plan:          'free',
     })
     .select()
@@ -133,7 +138,19 @@ export async function verifyPassword(slug: string, password: string): Promise<bo
     .maybeSingle();
 
   if (!data) return false;
-  return data['password_hash'] === password;
+
+  const storedHash = data['password_hash'] as string;
+
+  // Support legacy plaintext passwords: if stored value is not a bcrypt hash, compare directly and rehash
+  if (!storedHash.startsWith('$2b$') && !storedHash.startsWith('$2a$')) {
+    if (storedHash !== password) return false;
+    // Migrate to bcrypt on successful login
+    const newHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    await supabase.from('stalls').update({ password_hash: newHash }).eq('slug', slug);
+    return true;
+  }
+
+  return bcrypt.compare(password, storedHash);
 }
 
 // ─── ORDER FUNCTIONS ──────────────────────────────────────────────────────────
