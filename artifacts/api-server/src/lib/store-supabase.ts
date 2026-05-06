@@ -6,7 +6,7 @@
 
 import { supabase } from './supabase';
 import { logAnalyticsEvent } from './analytics-logger';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 const BCRYPT_ROUNDS = 12;
 
